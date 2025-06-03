@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-# --- Funkcja train_test_split_manual (z poprzedniego kroku) ---
 def train_test_split_manual(u, y, test_size=0.3, random_state=None):
     if not len(u) == len(y):
         raise ValueError("Tablice u i y muszą mieć taką samą długość.")
@@ -22,7 +21,6 @@ def train_test_split_manual(u, y, test_size=0.3, random_state=None):
     y_val = y[val_indices]
     return u_train, u_val, y_train, y_val
 
-# --- Wczytanie danych (z poprzednich kroków) ---
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 data_dir = os.path.join(project_root, 'data')
 extracted_file_name = 'danestat49.txt'
@@ -43,13 +41,10 @@ y_static = data_static[:, 1]
 u_train, u_val, y_train, y_val = train_test_split_manual(u_static, y_static, test_size=0.3, random_state=41)
 Y_train_col = y_train.reshape(-1, 1) # Przygotowujemy y_train do obliczeń macierzowych
 
-# --- Funkcja do obliczania błędu średniokwadratowego (MSE) ---
 def mse(y_true, y_pred):
     return np.mean((y_true - y_pred)**2)
 
-# --- KROK 3: Statyczne modele nieliniowe ---
 
-# Funkcja do tworzenia macierzy cech wielomianowych
 def polynomial_features(u, degree):
     """
     Tworzy macierz cech dla modelu wielomianowego.
@@ -81,10 +76,10 @@ print("\n--- Statyczne modele nieliniowe ---")
 for N in polynomial_degrees:
     print(f"\nAnaliza dla modelu wielomianowego stopnia N = {N}")
 
-    # 1. Tworzenie macierzy X_train_poly dla zbioru uczącego
+    # Tworzenie macierzy X_train_poly dla zbioru uczącego
     X_train_poly = polynomial_features(u_train, N)
 
-    # 2. Wyznaczenie parametrów A_poly metodą najmniejszych kwadratów
+    # Wyznaczenie parametrów A_poly metodą najmniejszych kwadratów
     try:
         A_poly = np.linalg.solve(X_train_poly.T @ X_train_poly, X_train_poly.T @ Y_train_col)
         print(f"Wyznaczone parametry dla N={N} (a0, a1, ..., a{N}):")
@@ -96,11 +91,11 @@ for N in polynomial_degrees:
         results_nonlinear.append({'N': N, 'MSE_train': float('inf'), 'MSE_val': float('inf'), 'params': None})
         continue # Przejdź do następnego stopnia wielomianu
 
-    # 3. Predykcje modelu dla zbioru uczącego i weryfikującego
+    # Predykcje modelu dla zbioru uczącego i weryfikującego
     y_pred_train_poly = predict_polynomial(u_train, A_poly)
     y_pred_val_poly = predict_polynomial(u_val, A_poly)
 
-    # 4. Obliczanie błędów MSE
+    # Obliczanie błędów MSE
     mse_train_poly = mse(y_train, y_pred_train_poly.flatten()) # .flatten() dla pewności
     mse_val_poly = mse(y_val, y_pred_val_poly.flatten())
 
@@ -109,7 +104,7 @@ for N in polynomial_degrees:
     print(f"MSE (zbiór uczący) dla N={N}: {mse_train_poly:.6f}")
     print(f"MSE (zbiór weryfikujący) dla N={N}: {mse_val_poly:.6f}")
 
-    # 5. Narysowanie charakterystyki y(u) modelu
+    # Narysowanie charakterystyki y(u) modelu
     plt.figure(figsize=(12, 7))
     plt.scatter(u_train, y_train, label='Zbiór uczący', s=10, alpha=0.3, color='blue')
     u_line = np.linspace(min(u_static), max(u_static), 200) # Gęstsza siatka dla gładszej krzywej
@@ -129,7 +124,7 @@ for N in polynomial_degrees:
     plt.ylim(min(y_static) - abs(min(y_static))*0.1, max(y_static) + abs(max(y_static))*0.1) # Ograniczenie osi Y dla lepszej czytelności
     plt.show()
 
-    # 6. Przedstawienie na rysunku relacji danych weryfikujących oraz wyjścia modelu
+    # Przedstawienie na rysunku relacji danych weryfikujących oraz wyjścia modelu
     plt.figure(figsize=(8, 8))
     plt.scatter(y_val, y_pred_val_poly.flatten(), label=f'Dane weryfikujące vs Predykcje (N={N})', alpha=0.7)
     min_val_plot = min(np.min(y_val), np.min(y_pred_val_poly))
