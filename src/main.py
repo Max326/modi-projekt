@@ -91,11 +91,186 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-print("\nPierwsze 5 próbek danych dynamicznych uczących (u, y):")
-for i in range(min(5, len(u_dynamic_train))):
-    print(f"k={i}, u: {u_dynamic_train[i]:.4f}, y: {y_dynamic_train[i]:.4f}")
+# --- KROK 2 (Modele Dynamiczne): Analiza statystyczna danych dynamicznych ---
 
-print("\nPierwsze 5 próbek danych dynamicznych weryfikujących (u, y):")
-for i in range(min(5, len(u_dynamic_val))):
-    print(f"k={i}, u: {u_dynamic_val[i]:.4f}, y: {y_dynamic_val[i]:.4f}")
+# ... (wszystkie poprzednie definicje funkcji i wczytywanie danych bez zmian) ...
+# --- Funkcja do obliczania błędu średniokwadratowego (MSE) ---
+def mse(y_true, y_pred):
+    return np.mean((y_true - y_pred)**2)
+
+# --- Funkcja do tworzenia macierzy regresorów Phi i wektora wyjść Y_target dla modelu ARX ---
+def create_arx_regressors_and_target(u, y, nA, nB):
+    max_delay = max(nA, nB)
+    if max_delay == 0:
+        if nB > 0:
+             Phi = u.reshape(-1,1) if len(u.shape)==1 else u
+             Y_target = y.reshape(-1,1)
+             return Phi, Y_target
+        else:
+            return np.array([]).reshape(len(y),0), y.reshape(-1,1)
+
+    num_samples = len(y)
+    num_regression_points = num_samples - max_delay
+    
+    if num_regression_points <= 0:
+        raise ValueError("Niewystarczająca liczba próbek do utworzenia regresorów z danym opóźnieniem.")
+
+    Phi = np.zeros((num_regression_points, nB + nA))
+    Y_target = np.zeros((num_regression_points, 1))
+
+    for k_idx in range(num_regression_points):
+        k_actual = k_idx + max_delay
+        phi_row_list = []
+        for i in range(1, nB + 1):
+            phi_row_list.append(u[k_actual - i])
+        for j in range(1, nA + 1):
+            phi_row_list.append(y[k_actual - j])
+        Phi[k_idx, :] = phi_row_list
+        Y_target[k_idx] = y[k_actual]
+    return Phi, Y_target
+
+# --- Funkcja do predykcji modelu ARX w trybie rekurencyjnym (symulacja swobodna) ---
+def predict_arx_recursive(u_signal, y_initial_conditions, theta, nA, nB):
+    max_delay = max(nA, nB)
+    num_total_samples = len(u_signal)
+    y_simulated = np.zeros(num_total_samples)
+
+    if max_delay > 0:
+        y_simulated[:max_delay] = y_initial_conditions[:max_delay]
+    
+    params_b = theta[0:nB].flatten()
+    params_a = theta[nB : nB+nA].flatten()
+
+    for k in range(max_delay, num_total_samples):
+        current_prediction = 0
+        for i in range(nB):
+            current_prediction += params_b[i] * u_signal[k - (i + 1)]
+        for j in range(nA):
+            current_prediction += params_a[j] * y_simulated[k - (j + 1)]
+        y_simulated[k] = current_prediction
+    return y_simulated
+# --- Główna pętla identyfikacji modeli ARX (ZAKTUALIZOWANA o dodatkowy wykres) ---
+orders_to_test = [(1, 1), (2, 2), (3, 3)] # (nA, nB)
+results_arx = []
+
+print("\n--- Dynamiczne modele liniowe ARX ---")
+
+for nA, nB in orders_to_test:
+    print(f"\nAnaliza dla modelu ARX rzędu nA={nA}, nB={nB}")
+    max_delay = max(nA, nB)
+
+    # 1. Estymacja parametrów na zbiorze uczącym
+    try:
+        Phi_train, Y_target_train = create_arx_regressors_and_target(u_dynamic_train, y_dynamic_train, nA, nB)
+        theta = np.linalg.solve(Phi_train.T @ Phi_train, Phi_train.T @ Y_target_train)
+    except np.linalg.LinAlgError:
+        print(f"BŁĄD: Problem z obliczeniem parametrów dla nA={nA}, nB={nB} (macierz osobliwa). Pomijam.")
+        results_arx.append({
+            'nA': nA, 'nB': nB, 'theta': None,
+            'mse_train_non_rec': float('inf'), 'mse_val_non_rec': float('inf'),
+            'mse_train_rec': float('inf'), 'mse_val_rec': float('inf')
+        })
+        continue
+    except ValueError as e:
+        print(f"BŁĄD przy tworzeniu regresorów dla nA={nA}, nB={nB}: {e}. Pomijam.")
+        results_arx.append({
+            'nA': nA, 'nB': nB, 'theta': None,
+            'mse_train_non_rec': float('inf'), 'mse_val_non_rec': float('inf'),
+            'mse_train_rec': float('inf'), 'mse_val_rec': float('inf')
+        })
+        continue
+
+    # 2. Ocena w trybie bez rekurencji (predykcja jednokrokowa)
+    # Zbiór uczący
+    y_pred_train_non_rec = (Phi_train @ theta).flatten() # .flatten() dla pewności
+    mse_train_non_rec = mse(Y_target_train.flatten(), y_pred_train_non_rec)
+    
+    # Zbiór weryfikujący
+    Phi_val, Y_target_val = create_arx_regressors_and_target(u_dynamic_val, y_dynamic_val, nA, nB)
+    y_pred_val_non_rec = (Phi_val @ theta).flatten()
+    mse_val_non_rec = mse(Y_target_val.flatten(), y_pred_val_non_rec)
+
+    # 3. Ocena w trybie z rekurencją (symulacja swobodna)
+    # Zbiór uczący
+    y_sim_train_rec = predict_arx_recursive(u_dynamic_train, y_dynamic_train, theta, nA, nB)
+    mse_train_rec = mse(y_dynamic_train[max_delay:], y_sim_train_rec[max_delay:])
+    
+    # Zbiór weryfikujący
+    y_sim_val_rec = predict_arx_recursive(u_dynamic_val, y_dynamic_val, theta, nA, nB)
+    mse_val_rec = mse(y_dynamic_val[max_delay:], y_sim_val_rec[max_delay:])
+
+    results_arx.append({
+        'nA': nA, 'nB': nB, 'theta': theta.flatten(),
+        'mse_train_non_rec': mse_train_non_rec, 'mse_val_non_rec': mse_val_non_rec,
+        'mse_train_rec': mse_train_rec, 'mse_val_rec': mse_val_rec
+    })
+
+    print(f"  MSE (uczący, bez rekurencji):  {mse_train_non_rec:.6f}")
+    print(f"  MSE (weryfik., bez rekurencji): {mse_val_non_rec:.6f}")
+    print(f"  MSE (uczący, z rekurencją):    {mse_train_rec:.6f}")
+    print(f"  MSE (weryfik., z rekurencją):   {mse_val_rec:.6f}")
+
+    # --- DODANY WYKRES: Zbiór weryfikujący (tryb BEZ rekurencji) ---
+    plt.figure(figsize=(12, 6))
+    # Oś czasu dla predykcji jednokrokowej.
+    # Y_target_val i y_pred_val_non_rec mają długość len(y_dynamic_val) - max_delay.
+    # Aby narysować je względem oryginalnego indeksu k, musimy przesunąć oś czasu.
+    time_vector_non_rec_val = np.arange(max_delay, len(y_dynamic_val))
+    
+    plt.plot(time_vector_non_rec_val, Y_target_val.flatten(), label='Rzeczywiste y(k) - weryfikujący', color='blue', alpha=0.8)
+    plt.plot(time_vector_non_rec_val, y_pred_val_non_rec, label=f'Predykcja $\hat{{y}}(k)$ ARX({nA},{nB}) (bez rekurencji) - weryfikujący', color='green', linestyle=':')
+    plt.title(f'Model ARX({nA},{nB}) - Zbiór weryfikujący (tryb BEZ rekurencji - predykcja jednokrokowa)')
+    plt.xlabel('Numer próbki k (od max_delay)')
+    plt.ylabel('Wartość sygnału')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    # --- KONIEC DODANEGO WYKRESU ---
+
+    # Wykres dla zbioru weryfikującego (tryb Z rekurencją) - pozostaje bez zmian
+    plt.figure(figsize=(12, 6))
+    time_vector_rec_val = np.arange(max_delay, len(y_dynamic_val))
+    plt.plot(time_vector_rec_val, y_dynamic_val[max_delay:], label='Rzeczywiste y(k) - weryfikujący', color='blue', alpha=0.8)
+    plt.plot(time_vector_rec_val, y_sim_val_rec[max_delay:], label=f'Symulowane $\hat{{y}}(k)$ ARX({nA},{nB}) (z rekurencją) - weryfikujący', color='red', linestyle='--')
+    plt.title(f'Model ARX({nA},{nB}) - Zbiór weryfikujący (tryb Z rekurencją - symulacja swobodna)')
+    plt.xlabel('Numer próbki k (od max_delay)')
+    plt.ylabel('Wartość sygnału')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# --- Prezentacja wyników w tabeli (bez zmian) ---
+print("\n--- Tabela błędów MSE dla modeli ARX ---")
+print("--------------------------------------------------------------------------------------------------")
+print("| nA | nB | MSE uczący (bez rek.) | MSE weryf. (bez rek.) | MSE uczący (z rek.)  | MSE weryf. (z rek.)   |")
+print("|----|----|-----------------------|-----------------------|----------------------|-----------------------|")
+for res in results_arx:
+    if res['theta'] is not None:
+        print(f"| {res['nA']:<2} | {res['nB']:<2} | {res['mse_train_non_rec']:<21.6f} | {res['mse_val_non_rec']:<21.6f} | {res['mse_train_rec']:<20.6f} | {res['mse_val_rec']:<21.6f} |")
+    else:
+        print(f"| {res['nA']:<2} | {res['nB']:<2} | {'BŁĄD':<21} | {'BŁĄD':<21} | {'BŁĄD':<20} | {'BŁĄD':<21} |")
+print("--------------------------------------------------------------------------------------------------")
+
+# --- Wybór najlepszego modelu liniowego ARX (bez zmian) ---
+best_arx_model = None
+min_mse_val_rec_arx = float('inf')
+
+for res in results_arx:
+    if res['theta'] is not None and res['mse_val_rec'] < min_mse_val_rec_arx:
+        min_mse_val_rec_arx = res['mse_val_rec']
+        best_arx_model = res
+
+if best_arx_model:
+    print("\n--- Wybór najlepszego dynamicznego modelu liniowego ARX ---")
+    print(f"Najlepszy model ARX (na podstawie najniższego MSE na zbiorze weryfikującym w trybie z rekurencją) to ARX({best_arx_model['nA']},{best_arx_model['nB']}).")
+    print(f"  Jego MSE (weryfikujący, z rekurencją): {best_arx_model['mse_val_rec']:.6f}")
+    print(f"  Parametry [b_i, a_j]: {np.array2string(best_arx_model['theta'], formatter={'float_kind':lambda x: '%.4f' % x})}")
+    print("\nKomentarz:")
+    print("Model ten został wybrany, ponieważ osiągnął najniższy błąd na zbiorze weryfikującym podczas symulacji swobodnej (tryb z rekurencją).")
+    print("Ten tryb jest bardziej wymagający i lepiej odzwierciedla, jak model będzie działał autonomicznie.")
+    print("Należy porównać błędy 'bez rekurencji' (predykcja jednokrokowa) z błędami 'z rekurencją'. Duży wzrost błędu w trybie rekurencyjnym")
+    print("może wskazywać na problemy ze stabilnością modelu lub akumulację błędów.")
+    print("Wizualizacje przebiegów czasowych pomagają ocenić, czy model dobrze oddaje dynamikę procesu.")
+else:
+    print("\nNie udało się wybrać najlepszego modelu ARX (np. z powodu błędów obliczeniowych).")
 
