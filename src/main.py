@@ -40,7 +40,7 @@ except Exception as e:
 u_static = data_static[:, 0]
 y_static = data_static[:, 1]
 
-u_train, u_val, y_train, y_val = train_test_split_manual(u_static, y_static, test_size=0.3, random_state=42)
+u_train, u_val, y_train, y_val = train_test_split_manual(u_static, y_static, test_size=0.3, random_state=41)
 Y_train_col = y_train.reshape(-1, 1) # Przygotowujemy y_train do obliczeń macierzowych
 
 # --- Funkcja do obliczania błędu średniokwadratowego (MSE) ---
