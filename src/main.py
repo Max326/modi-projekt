@@ -2,11 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
-# --- Definicje ścieżek (możesz je mieć już zdefiniowane) ---
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 data_dir = os.path.join(project_root, 'data')
 
-# Nazwy plików po rozpakowaniu (załóżmy takie nazwy)
 dynamic_train_file_name = 'danedynucz49.txt'
 dynamic_val_file_name = 'danedynwer49.txt'
 
@@ -146,6 +144,21 @@ def predict_arx_recursive(u_signal, y_initial_conditions, theta, nA, nB):
         y_simulated[k] = current_prediction
     return y_simulated
 
+def plot_actual_vs_predicted(y_actual, y_predicted, title='Relacja y_rzeczywiste vs y_przewidziane', model_name='Model'):
+    """Tworzy wykres relacji wartości rzeczywistych i przewidzianych."""
+    plt.figure(figsize=(8, 8))
+    plt.scatter(y_actual, y_predicted, label=f'Dane weryfikujące vs Predykcje ({model_name})', alpha=0.7)
+    min_val_plot = min(np.min(y_actual), np.min(y_predicted))
+    max_val_plot = max(np.max(y_actual), np.max(y_predicted))
+    plt.plot([min_val_plot, max_val_plot], [min_val_plot, max_val_plot], 'k--', lw=2, label='Idealna predykcja')
+    plt.title(title)
+    plt.xlabel('Rzeczywiste wartości y (zbiór weryfikujący)')
+    plt.ylabel('Przewidziane wartości y')
+    plt.legend()
+    plt.grid(True)
+    plt.axis('equal')
+    plt.show()
+
 orders_to_test = [(1, 1), (2, 2), (3, 3)] # (nA, nB)
 results_arx = []
 
@@ -214,7 +227,6 @@ for nA, nB in orders_to_test:
     plt.legend()
     plt.grid(True)
     plt.show()
-    # --- KONIEC DODANEGO WYKRESU ---
 
     # Wykres dla zbioru weryfikującego (tryb Z rekurencją) - pozostaje bez zmian
     plt.figure(figsize=(12, 6))
@@ -230,7 +242,7 @@ for nA, nB in orders_to_test:
 
 # --- Prezentacja wyników w tabeli (bez zmian) ---
 print("\n--- Tabela błędów MSE dla modeli ARX ---")
-print("--------------------------------------------------------------------------------------------------")
+print("------------------------------------------------------------------------------------------------------")
 print("| nA | nB | MSE uczący (bez rek.) | MSE weryf. (bez rek.) | MSE uczący (z rek.)  | MSE weryf. (z rek.)   |")
 print("|----|----|-----------------------|-----------------------|----------------------|-----------------------|")
 for res in results_arx:
@@ -238,28 +250,5 @@ for res in results_arx:
         print(f"| {res['nA']:<2} | {res['nB']:<2} | {res['mse_train_non_rec']:<21.6f} | {res['mse_val_non_rec']:<21.6f} | {res['mse_train_rec']:<20.6f} | {res['mse_val_rec']:<21.6f} |")
     else:
         print(f"| {res['nA']:<2} | {res['nB']:<2} | {'BŁĄD':<21} | {'BŁĄD':<21} | {'BŁĄD':<20} | {'BŁĄD':<21} |")
-print("--------------------------------------------------------------------------------------------------")
-
-# --- Wybór najlepszego modelu liniowego ARX (bez zmian) ---
-best_arx_model = None
-min_mse_val_rec_arx = float('inf')
-
-for res in results_arx:
-    if res['theta'] is not None and res['mse_val_rec'] < min_mse_val_rec_arx:
-        min_mse_val_rec_arx = res['mse_val_rec']
-        best_arx_model = res
-
-if best_arx_model:
-    print("\n--- Wybór najlepszego dynamicznego modelu liniowego ARX ---")
-    print(f"Najlepszy model ARX (na podstawie najniższego MSE na zbiorze weryfikującym w trybie z rekurencją) to ARX({best_arx_model['nA']},{best_arx_model['nB']}).")
-    print(f"  Jego MSE (weryfikujący, z rekurencją): {best_arx_model['mse_val_rec']:.6f}")
-    print(f"  Parametry [b_i, a_j]: {np.array2string(best_arx_model['theta'], formatter={'float_kind':lambda x: '%.4f' % x})}")
-    print("\nKomentarz:")
-    print("Model ten został wybrany, ponieważ osiągnął najniższy błąd na zbiorze weryfikującym podczas symulacji swobodnej (tryb z rekurencją).")
-    print("Ten tryb jest bardziej wymagający i lepiej odzwierciedla, jak model będzie działał autonomicznie.")
-    print("Należy porównać błędy 'bez rekurencji' (predykcja jednokrokowa) z błędami 'z rekurencją'. Duży wzrost błędu w trybie rekurencyjnym")
-    print("może wskazywać na problemy ze stabilnością modelu lub akumulację błędów.")
-    print("Wizualizacje przebiegów czasowych pomagają ocenić, czy model dobrze oddaje dynamikę procesu.")
-else:
-    print("\nNie udało się wybrać najlepszego modelu ARX (np. z powodu błędów obliczeniowych).")
+print("------------------------------------------------------------------------------------------------------")
 
