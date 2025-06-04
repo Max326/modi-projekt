@@ -115,14 +115,3 @@ plt.legend()
 plt.grid(True)
 plt.axis('equal') # Aby osie miały tę samą skalę, co ułatwia interpretację linii y=x
 plt.show()
-
-print("\nKomentarz do wyników modelu liniowego:")
-print("-----------------------------------------")
-print("Na podstawie uzyskanych parametrów a0 i a1, model liniowy stara się przybliżyć zależność y(u).")
-print(f"Wykres charakterystyki modelu (czerwona linia) pokazuje, jak ta prosta dopasowuje się do danych. Można zauważyć, że dane wykazują pewną nieliniowość, której model liniowy z natury nie jest w stanie odwzorować.")
-print(f"Błąd MSE na zbiorze uczącym ({mse_train_linear:.4f}) oraz weryfikującym ({mse_val_linear:.4f}) dają miarę jakości tego dopasowania. Im niższe wartości, tym lepiej.")
-print("Wykres wyjścia modelu na tle danych weryfikujących pozwala wizualnie ocenić, jak model generalizuje na danych, których nie widział podczas uczenia.")
-print("Wykres relacji y_rzeczywiste vs y_przewidziane dla zbioru weryfikującego pokazuje, jak blisko predykcje modelu leżą idealnej linii y=x. Rozrzut punktów wokół tej linii świadczy o niedoskonałościach modelu.")
-print("Prawdopodobnie model liniowy będzie miał ograniczone możliwości w dokładnym odwzorowaniu tej charakterystyki, co powinno być widoczne w wartościach błędów oraz na wykresach. Należy się spodziewać, że modele nieliniowe (kolejny krok) dadzą lepsze wyniki.")
-print("-----------------------------------------")
-
