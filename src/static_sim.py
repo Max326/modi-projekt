@@ -154,30 +154,3 @@ for res in results_nonlinear:
         print(f"| {res['N']:<9} | {'BŁĄD':<14} | {'BŁĄD':<18} |")
 print("----------------------------------------------------")
 
-# Wybór najlepszego modelu statycznego
-best_model_static = None
-min_mse_val = float('inf')
-
-for res in results_nonlinear:
-    if res['params'] is not None and res['MSE_val'] < min_mse_val:
-        min_mse_val = res['MSE_val']
-        best_model_static = res
-
-if best_model_static:
-    print("\n--- Wybór najlepszego modelu statycznego ---")
-    print(f"Najlepszy model statyczny (na podstawie najniższego MSE na zbiorze weryfikującym) to model wielomianowy stopnia N = {best_model_static['N']}.")
-    print(f"MSE (uczący) dla tego modelu: {best_model_static['MSE_train']:.6f}")
-    print(f"MSE (weryfikujący) dla tego modelu: {best_model_static['MSE_val']:.6f}")
-    print(f"Parametry najlepszego modelu (a0, ..., a{best_model_static['N']}):")
-    for i, coeff in enumerate(best_model_static['params'].flatten()):
-       print(f"  a{i} = {coeff:.4f}")
-    print("\nUzasadnienie:")
-    print("Model ten został wybrany, ponieważ osiągnął najniższą wartość błędu średniokwadratowego (MSE) na zbiorze weryfikującym.")
-    print("Niski błąd na zbiorze weryfikującym sugeruje, że model dobrze generalizuje na nowe, nieznane dane,")
-    print("unikając jednocześnie znaczącego przeuczenia (overfittingu), które mogłoby się objawiać niskim błędem na zbiorze uczącym,")
-    print("ale znacznie wyższym na zbiorze weryfikującym dla bardziej złożonych modeli (wyższych N).")
-    print("Należy również zwrócić uwagę na zasadę oszczędności (Ockhama) - jeśli dwa modele dają podobne błędy na zbiorze weryfikującym,")
-    print("preferowany jest model prostszy (o niższym stopniu N). W tym przypadku wybieramy model o najniższym MSE_val.")
-else:
-    print("\nNie udało się wybrać najlepszego modelu statycznego (np. z powodu błędów obliczeniowych dla wszystkich stopni).")
-
