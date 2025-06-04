@@ -106,8 +106,8 @@ for N in polynomial_degrees:
 
     # Narysowanie charakterystyki y(u) modelu
     plt.figure(figsize=(12, 7))
-    plt.scatter(u_train, y_train, label='Zbiór uczący', s=10, alpha=0.3, color='blue')
-    u_line = np.linspace(min(u_static), max(u_static), 200) # Gęstsza siatka dla gładszej krzywej
+    plt.scatter(u_val, y_val, label='Zbiór weryfikujący', s=10, alpha=0.3, color='orange')
+    u_line = np.linspace(min(u_val), max(u_val), 200) # Gęstsza siatka dla gładszej krzywej
     y_line_model_poly = predict_polynomial(u_line, A_poly)
     
     # Budowanie etykiety dla legendy
@@ -130,9 +130,9 @@ for N in polynomial_degrees:
     min_val_plot = min(np.min(y_val), np.min(y_pred_val_poly))
     max_val_plot = max(np.max(y_val), np.max(y_pred_val_poly))
     plt.plot([min_val_plot, max_val_plot], [min_val_plot, max_val_plot], 'k--', lw=2, label='Idealna predykcja')
-    plt.title(f'Relacja y_rzeczywiste vs y_przewidziane (N={N})')
-    plt.xlabel('Rzeczywiste wartości y (zbiór weryfikujący)')
-    plt.ylabel(f'Przewidziane wartości y (model N={N})')
+    plt.title(f'Relacja y vs y_mod (N={N})')
+    plt.xlabel('Wartości y (zbiór weryfikujący)')
+    plt.ylabel(f'Wartości y_mod (model N={N})')
     plt.legend()
     plt.grid(True)
     plt.axis('equal')
