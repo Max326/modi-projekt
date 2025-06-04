@@ -128,10 +128,10 @@ plt.scatter(y_val, y_pred_val_linear, label='Dane weryfikujące vs Predykcje mod
 # Linia idealnej predykcji (y_true = y_pred)
 min_val = min(np.min(y_val), np.min(y_pred_val_linear))
 max_val = max(np.max(y_val), np.max(y_pred_val_linear))
-plt.plot([min_val, max_val], [min_val, max_val], 'k--', lw=2, label='Idealna predykcja (y_rzeczywiste = y_przewidziane)')
+plt.plot([min_val, max_val], [min_val, max_val], 'k--', lw=2, label='Idealna predykcja (y = y_mod)')
 plt.title('Relacja danych weryfikujących i wyjścia modelu liniowego')
-plt.xlabel('Rzeczywiste wartości y (zbiór weryfikujący)')
-plt.ylabel('Przewidziane wartości y (model liniowy)')
+plt.xlabel('Wartości y (zbiór weryfikujący)')
+plt.ylabel('Wartości y_mod (model liniowy)')
 plt.legend()
 plt.grid(True)
 plt.axis('equal') # Aby osie miały tę samą skalę, co ułatwia interpretację linii y=x
