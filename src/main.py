@@ -264,24 +264,3 @@ for res in results_arx:
         print(f"| {res['nA']:<2} | {res['nB']:<2} | {'BŁĄD':<21} | {'BŁĄD':<21} | {'BŁĄD':<20} | {'BŁĄD':<21} |")
 print("------------------------------------------------------------------------------------------------------")
 
-best_arx_model = None
-min_mse_val_rec_arx = float('inf')
-
-for res in results_arx:
-    if res['theta'] is not None and res['mse_val_rec'] < min_mse_val_rec_arx:
-        min_mse_val_rec_arx = res['mse_val_rec']
-        best_arx_model = res
-
-if best_arx_model:
-    print("\n--- Wybór najlepszego dynamicznego modelu liniowego ARX ---")
-    print(f"Najlepszy model ARX (na podstawie najniższego MSE na zbiorze weryfikującym w trybie z rekurencją) to ARX({best_arx_model['nA']},{best_arx_model['nB']}).")
-    print(f"  Jego MSE (weryfikujący, z rekurencją): {best_arx_model['mse_val_rec']:.6f}")
-    print(f"  Parametry [b_i, a_j]: {np.array2string(best_arx_model['theta'], formatter={'float_kind':lambda x: '%.4f' % x})}")
-    print("\nKomentarz:")
-    print("Model ten został wybrany, ponieważ osiągnął najniższy błąd na zbiorze weryfikującym podczas symulacji swobodnej (tryb z rekurencją).")
-    print("Ten tryb jest bardziej wymagający i lepiej odzwierciedla, jak model będzie działał autonomicznie.")
-    print("Należy porównać błędy 'bez rekurencji' (predykcja jednokrokowa) z błędami 'z rekurencją'. Duży wzrost błędu w trybie rekurencyjnym")
-    print("może wskazywać na problemy ze stabilnością modelu lub akumulację błędów.")
-    print("Wizualizacje przebiegów czasowych pomagają ocenić, czy model dobrze oddaje dynamikę procesu.")
-else:
-    print("\nNie udało się wybrać najlepszego modelu ARX (np. z powodu błędów obliczeniowych).")
