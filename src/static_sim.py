@@ -106,8 +106,8 @@ for N in polynomial_degrees:
 
     # Narysowanie charakterystyki y(u) modelu
     plt.figure(figsize=(12, 7))
-    plt.scatter(u_val, y_val, label='Zbiór weryfikujący', s=10, alpha=0.3, color='orange')
-    u_line = np.linspace(min(u_val), max(u_val), 200) # Gęstsza siatka dla gładszej krzywej
+    plt.scatter(u_val, y_val, label='Zbiór weryfikujący', s=20, alpha=0.3, color='orange')
+    u_line = np.linspace(min(u_static), max(u_static), 200) # Gęstsza siatka dla gładszej krzywej
     y_line_model_poly = predict_polynomial(u_line, A_poly)
     
     # Budowanie etykiety dla legendy
@@ -169,9 +169,8 @@ if best_model_static:
     print(f"MSE (uczący) dla tego modelu: {best_model_static['MSE_train']:.6f}")
     print(f"MSE (weryfikujący) dla tego modelu: {best_model_static['MSE_val']:.6f}")
     print(f"Parametry najlepszego modelu (a0, ..., a{best_model_static['N']}):")
-    #for i, coeff in enumerate(best_model_static['params'].flatten()):
-    #    print(f"  a{i} = {coeff:.4f}")
-    # Uzasadnienie:
+    for i, coeff in enumerate(best_model_static['params'].flatten()):
+       print(f"  a{i} = {coeff:.4f}")
     print("\nUzasadnienie:")
     print("Model ten został wybrany, ponieważ osiągnął najniższą wartość błędu średniokwadratowego (MSE) na zbiorze weryfikującym.")
     print("Niski błąd na zbiorze weryfikującym sugeruje, że model dobrze generalizuje na nowe, nieznane dane,")
