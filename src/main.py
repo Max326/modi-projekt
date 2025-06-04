@@ -144,8 +144,7 @@ def predict_arx_recursive(u_signal, y_initial_conditions, theta, nA, nB):
         y_simulated[k] = current_prediction
     return y_simulated
 
-def plot_actual_vs_predicted(y_actual, y_predicted, title='Relacja y_rzeczywiste vs y_przewidziane', model_name='Model'):
-    """Tworzy wykres relacji wartości rzeczywistych i przewidzianych."""
+def plot_actual_vs_predicted(y_actual, y_predicted, title='Relacja y vs y_mod', model_name='Model'):
     plt.figure(figsize=(8, 8))
     plt.scatter(y_actual, y_predicted, label=f'Dane weryfikujące vs Predykcje ({model_name})', alpha=0.7)
     min_val_plot = min(np.min(y_actual), np.min(y_predicted))
@@ -153,7 +152,7 @@ def plot_actual_vs_predicted(y_actual, y_predicted, title='Relacja y_rzeczywiste
     plt.plot([min_val_plot, max_val_plot], [min_val_plot, max_val_plot], 'k--', lw=2, label='Idealna predykcja')
     plt.title(title)
     plt.xlabel('Rzeczywiste wartości y (zbiór weryfikujący)')
-    plt.ylabel('Przewidziane wartości y')
+    plt.ylabel('y_mod')
     plt.legend()
     plt.grid(True)
     plt.axis('equal')
@@ -216,9 +215,23 @@ for nA, nB in orders_to_test:
     print(f"  MSE (uczący, z rekurencją):    {mse_train_rec:.6f}")
     print(f"  MSE (weryfik., z rekurencją):   {mse_val_rec:.6f}")
 
+    plot_actual_vs_predicted(
+        Y_target_val.flatten(),
+        y_pred_val_non_rec,
+        title=f'ARX({nA},{nB}) - Relacja y vs y_pred (weryf., bez rekurencji)',
+        model_name=f'ARX({nA},{nB}) Bez Rekurencji'
+    )
+
+    plot_actual_vs_predicted(
+        y_dynamic_val[max_delay:],  # Rzeczywiste wartości (od max_delay)
+        y_sim_val_rec[max_delay:],   # Symulowane wartości (od max_delay)
+        title=f'ARX({nA},{nB}) - Relacja y vs y_sym (weryf., z rekurencją)',
+        model_name=f'ARX({nA},{nB}) Z Rekurencją'
+    )
+
+    # 1. Wykres dla trybu BEZ rekurencji (predykcja jednokrokowa)
     plt.figure(figsize=(12, 6))
     time_vector_non_rec_val = np.arange(max_delay, len(y_dynamic_val))
-    
     plt.plot(time_vector_non_rec_val, Y_target_val.flatten(), label='Rzeczywiste y(k) - weryfikujący', color='blue', alpha=0.8)
     plt.plot(time_vector_non_rec_val, y_pred_val_non_rec, label=f'Predykcja $\hat{{y}}(k)$ ARX({nA},{nB}) (bez rekurencji) - weryfikujący', color='green', linestyle=':')
     plt.title(f'Model ARX({nA},{nB}) - Zbiór weryfikujący (tryb BEZ rekurencji - predykcja jednokrokowa)')
@@ -228,7 +241,7 @@ for nA, nB in orders_to_test:
     plt.grid(True)
     plt.show()
 
-    # Wykres dla zbioru weryfikującego (tryb Z rekurencją) - pozostaje bez zmian
+    # 2. Wykres dla trybu Z rekurencją (symulacja swobodna)
     plt.figure(figsize=(12, 6))
     time_vector_rec_val = np.arange(max_delay, len(y_dynamic_val))
     plt.plot(time_vector_rec_val, y_dynamic_val[max_delay:], label='Rzeczywiste y(k) - weryfikujący', color='blue', alpha=0.8)
@@ -240,7 +253,6 @@ for nA, nB in orders_to_test:
     plt.grid(True)
     plt.show()
 
-# --- Prezentacja wyników w tabeli (bez zmian) ---
 print("\n--- Tabela błędów MSE dla modeli ARX ---")
 print("------------------------------------------------------------------------------------------------------")
 print("| nA | nB | MSE uczący (bez rek.) | MSE weryf. (bez rek.) | MSE uczący (z rek.)  | MSE weryf. (z rek.)   |")
@@ -252,3 +264,24 @@ for res in results_arx:
         print(f"| {res['nA']:<2} | {res['nB']:<2} | {'BŁĄD':<21} | {'BŁĄD':<21} | {'BŁĄD':<20} | {'BŁĄD':<21} |")
 print("------------------------------------------------------------------------------------------------------")
 
+best_arx_model = None
+min_mse_val_rec_arx = float('inf')
+
+for res in results_arx:
+    if res['theta'] is not None and res['mse_val_rec'] < min_mse_val_rec_arx:
+        min_mse_val_rec_arx = res['mse_val_rec']
+        best_arx_model = res
+
+if best_arx_model:
+    print("\n--- Wybór najlepszego dynamicznego modelu liniowego ARX ---")
+    print(f"Najlepszy model ARX (na podstawie najniższego MSE na zbiorze weryfikującym w trybie z rekurencją) to ARX({best_arx_model['nA']},{best_arx_model['nB']}).")
+    print(f"  Jego MSE (weryfikujący, z rekurencją): {best_arx_model['mse_val_rec']:.6f}")
+    print(f"  Parametry [b_i, a_j]: {np.array2string(best_arx_model['theta'], formatter={'float_kind':lambda x: '%.4f' % x})}")
+    print("\nKomentarz:")
+    print("Model ten został wybrany, ponieważ osiągnął najniższy błąd na zbiorze weryfikującym podczas symulacji swobodnej (tryb z rekurencją).")
+    print("Ten tryb jest bardziej wymagający i lepiej odzwierciedla, jak model będzie działał autonomicznie.")
+    print("Należy porównać błędy 'bez rekurencji' (predykcja jednokrokowa) z błędami 'z rekurencją'. Duży wzrost błędu w trybie rekurencyjnym")
+    print("może wskazywać na problemy ze stabilnością modelu lub akumulację błędów.")
+    print("Wizualizacje przebiegów czasowych pomagają ocenić, czy model dobrze oddaje dynamikę procesu.")
+else:
+    print("\nNie udało się wybrać najlepszego modelu ARX (np. z powodu błędów obliczeniowych).")
