@@ -13,7 +13,6 @@ dynamic_val_file_name = 'danedynwer49.txt'
 dynamic_train_file_path = os.path.join(data_dir, dynamic_train_file_name)
 dynamic_val_file_path = os.path.join(data_dir, dynamic_val_file_name)
 
-# --- KROK 1 (Modele Dynamiczne): Wczytanie i wizualizacja danych dynamicznych ---
 
 print("\n--- Modele Dynamiczne: Wczytywanie danych ---")
 
@@ -91,9 +90,6 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-# --- KROK 2 (Modele Dynamiczne): Analiza statystyczna danych dynamicznych ---
-
-# ... (wszystkie poprzednie definicje funkcji i wczytywanie danych bez zmian) ...
 # --- Funkcja do obliczania błędu średniokwadratowego (MSE) ---
 def mse(y_true, y_pred):
     return np.mean((y_true - y_pred)**2)
@@ -149,7 +145,7 @@ def predict_arx_recursive(u_signal, y_initial_conditions, theta, nA, nB):
             current_prediction += params_a[j] * y_simulated[k - (j + 1)]
         y_simulated[k] = current_prediction
     return y_simulated
-# --- Główna pętla identyfikacji modeli ARX (ZAKTUALIZOWANA o dodatkowy wykres) ---
+
 orders_to_test = [(1, 1), (2, 2), (3, 3)] # (nA, nB)
 results_arx = []
 
@@ -159,7 +155,6 @@ for nA, nB in orders_to_test:
     print(f"\nAnaliza dla modelu ARX rzędu nA={nA}, nB={nB}")
     max_delay = max(nA, nB)
 
-    # 1. Estymacja parametrów na zbiorze uczącym
     try:
         Phi_train, Y_target_train = create_arx_regressors_and_target(u_dynamic_train, y_dynamic_train, nA, nB)
         theta = np.linalg.solve(Phi_train.T @ Phi_train, Phi_train.T @ Y_target_train)
@@ -180,7 +175,6 @@ for nA, nB in orders_to_test:
         })
         continue
 
-    # 2. Ocena w trybie bez rekurencji (predykcja jednokrokowa)
     # Zbiór uczący
     y_pred_train_non_rec = (Phi_train @ theta).flatten() # .flatten() dla pewności
     mse_train_non_rec = mse(Y_target_train.flatten(), y_pred_train_non_rec)
@@ -190,7 +184,6 @@ for nA, nB in orders_to_test:
     y_pred_val_non_rec = (Phi_val @ theta).flatten()
     mse_val_non_rec = mse(Y_target_val.flatten(), y_pred_val_non_rec)
 
-    # 3. Ocena w trybie z rekurencją (symulacja swobodna)
     # Zbiór uczący
     y_sim_train_rec = predict_arx_recursive(u_dynamic_train, y_dynamic_train, theta, nA, nB)
     mse_train_rec = mse(y_dynamic_train[max_delay:], y_sim_train_rec[max_delay:])
@@ -210,11 +203,7 @@ for nA, nB in orders_to_test:
     print(f"  MSE (uczący, z rekurencją):    {mse_train_rec:.6f}")
     print(f"  MSE (weryfik., z rekurencją):   {mse_val_rec:.6f}")
 
-    # --- DODANY WYKRES: Zbiór weryfikujący (tryb BEZ rekurencji) ---
     plt.figure(figsize=(12, 6))
-    # Oś czasu dla predykcji jednokrokowej.
-    # Y_target_val i y_pred_val_non_rec mają długość len(y_dynamic_val) - max_delay.
-    # Aby narysować je względem oryginalnego indeksu k, musimy przesunąć oś czasu.
     time_vector_non_rec_val = np.arange(max_delay, len(y_dynamic_val))
     
     plt.plot(time_vector_non_rec_val, Y_target_val.flatten(), label='Rzeczywiste y(k) - weryfikujący', color='blue', alpha=0.8)

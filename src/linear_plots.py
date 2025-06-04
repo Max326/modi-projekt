@@ -42,25 +42,11 @@ y_static = data_static[:, 1]
 
 u_train, u_val, y_train, y_val = train_test_split_manual(u_static, y_static, test_size=0.3, random_state=42)
 
-# --- KROK 2: Statyczny model liniowy ---
-
-# 2.1 Wyznaczenie parametrów a0 i a1 metodą najmniejszych kwadratów
-# Tworzymy macierz X_ucz dla zbioru uczącego
-# Pierwsza kolumna to jedynki (dla a0), druga kolumna to u_train (dla a1)
 X_train = np.vstack([np.ones_like(u_train), u_train]).T # .T transponuje, aby u_train było kolumną
-# Alternatywnie: X_train = np.column_stack((np.ones_like(u_train), u_train))
 
-# Wektor Y_ucz (y_train jest już odpowiednim wektorem, ale dla obliczeń macierzowych lepiej go ukształtować jako kolumnę)
 Y_train_col = y_train.reshape(-1, 1)
 
-# Obliczenie parametrów A = (X_train^T X_train)^-1 X_train^T Y_train_col
 try:
-    # X_T_X = np.dot(X_train.T, X_train)
-    # X_T_Y = np.dot(X_train.T, Y_train_col)
-    # A_static_linear = np.dot(np.linalg.inv(X_T_X), X_T_Y)
-    
-    # Bardziej stabilny numerycznie sposób, szczególnie gdy X_train.T @ X_train jest bliskie osobliwości
-    # Jest to rozwiązanie równania liniowego (X_train.T @ X_train) A = X_train.T @ Y_train_col
     A_static_linear = np.linalg.solve(X_train.T @ X_train, X_train.T @ Y_train_col)
 
     a0_linear = A_static_linear[0, 0]
@@ -72,19 +58,15 @@ try:
 
 except np.linalg.LinAlgError:
     print("BŁĄD: Nie można obliczyć macierzy odwrotnej. Macierz X_train.T @ X_train może być osobliwa.")
-    # W takim przypadku można by użyć np. pseudo-odwrotności Moore'a-Penrose'a:
-    # A_static_linear = np.linalg.pinv(X_train.T @ X_train) @ X_train.T @ Y_train_col
-    # Ale na razie trzymajmy się standardowej MNK.
     exit()
 
 # Funkcja predykcji modelu liniowego
 def predict_linear(u, a0, a1):
     return a0 + a1 * u
 
-# 2.2 Narysowanie charakterystyki y(u) modelu
 plt.figure(figsize=(10, 6))
 plt.scatter(u_train, y_train, label='Zbiór uczący', s=10, alpha=0.5, color='blue') # Rysujemy dane uczące dla kontekstu
-# Generujemy wartości u dla linii modelu
+
 u_line = np.linspace(min(u_static), max(u_static), 100)
 y_line_model = predict_linear(u_line, a0_linear, a1_linear)
 plt.plot(u_line, y_line_model, color='red', linewidth=2, label=f'Model liniowy: y = {a0_linear:.2f} + {a1_linear:.2f}u')
@@ -95,7 +77,6 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-# 2.3 Obliczanie błędów modelu
 # Predykcje modelu dla zbioru uczącego i weryfikującego
 y_pred_train_linear = predict_linear(u_train, a0_linear, a1_linear)
 y_pred_val_linear = predict_linear(u_val, a0_linear, a1_linear)
@@ -111,7 +92,6 @@ print(f"\nBłędy modelu liniowego:")
 print(f"MSE (zbiór uczący): {mse_train_linear:.4f}")
 print(f"MSE (zbiór weryfikujący): {mse_val_linear:.4f}")
 
-# 2.4 Przedstawienie na rysunku wyjścia modelu na tle zbioru danych weryfikujących
 plt.figure(figsize=(10, 6))
 plt.scatter(u_val, y_val, label='Zbiór weryfikujący', s=10, alpha=0.7, color='orange')
 plt.plot(u_line, y_line_model, color='red', linewidth=2, label=f'Model liniowy: y = {a0_linear:.2f} + {a1_linear:.2f}u')
@@ -122,7 +102,6 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
-# 2.5 Przedstawienie na rysunku relacji danych weryfikujących oraz wyjścia modelu
 plt.figure(figsize=(8, 8))
 plt.scatter(y_val, y_pred_val_linear, label='Dane weryfikujące vs Predykcje modelu', alpha=0.7)
 # Linia idealnej predykcji (y_true = y_pred)
@@ -137,7 +116,6 @@ plt.grid(True)
 plt.axis('equal') # Aby osie miały tę samą skalę, co ułatwia interpretację linii y=x
 plt.show()
 
-# 2.6 Komentarz do wyników (miejsce na Twój komentarz)
 print("\nKomentarz do wyników modelu liniowego:")
 print("-----------------------------------------")
 print("Na podstawie uzyskanych parametrów a0 i a1, model liniowy stara się przybliżyć zależność y(u).")
